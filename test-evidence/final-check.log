@@ -1,0 +1,7 @@
+MENU layout: {"titleTop":10,"titleH":101,"gridBottom":685} (titleTop>=0 and gridBottom<=640 means nothing clipped)
+KEYBOARD ArrowLeft: x 480 -> 194 (moved left: true)
+KEYBOARD Space: bullets in flight = 4 (fired: true)
+KEYBOARD P: paused=paused resumed=playing
+L1 smoke on final build: complete
+BOSS mid-fight: hp=44/90
+ERRORS (excluding SDK SSL load): 0 []

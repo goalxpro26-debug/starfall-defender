@@ -1,0 +1,59 @@
+PASS | boot: menu state | {"ready":true,"state":"menu","img":"18/18","levels":12,"save":{"unlocked":1,"stars":{},"score":0},"gmPreRoll":false,"gmAvailable":false,"sdkType":"undefined"}
+PASS | boot: all images loaded | 18/18
+PASS | boot: 12 levels defined | 12
+PASS | boot: fresh save unlocked=1 | {"unlocked":1,"stars":{},"score":0}
+PASS | boot: NO ad on load (preRoll false) | preRoll=false
+PASS | boot: SDK absent is tolerated (game runs anyway) | sdk=undefined
+PASS | menu: 12 level buttons | 12
+PASS | menu: 11 locked at start | 11
+HEADLESS FPS (SwiftShader, menu): 16.0
+PASS | play: loading screen shows | {"state":"loading","loadingVisible":true,"preRoll":true}
+PASS | play: loading lasts ~3s | 2530ms after click+600ms wait
+... L1 progress: state=playing kills=0 leaked=0 baseHp=8 levelTime=0.1s bossHp=null
+PASS | L1 completes without god mode | {"level":1,"outcome":"complete","seconds":17.1,"kills":14,"leaked":0,"baseHp":8,"livesLeft":3,"bossSeen":false,"bossMaxSeen":0}
+PASS | save: reload keeps unlocked=2 + stars | {"unlocked":2,"stars":{"1":3},"score":1900} | btn="CONTINUE — LEVEL 2"
+PASS | save: menu after reload | menu
+PASS | GM SDK_GAME_PAUSE pauses game | paused
+PASS | GM SDK_GAME_START resumes game | playing
+PASS | mute toggle works | true
+... L2 progress: state=playing kills=0 leaked=0 baseHp=8 levelTime=0.0s bossHp=null
+PASS | L2 completes | {"level":2,"outcome":"complete","seconds":24.1,"kills":20,"leaked":0,"baseHp":8,"livesLeft":3,"bossSeen":false,"bossMaxSeen":0}
+... L3 progress: state=playing kills=0 leaked=0 baseHp=8 levelTime=0.0s bossHp=null
+PASS | L3 completes | {"level":3,"outcome":"complete","seconds":25.1,"kills":31,"leaked":0,"baseHp":8,"livesLeft":3,"bossSeen":false,"bossMaxSeen":0}
+... L4 progress: state=playing kills=0 leaked=0 baseHp=8 levelTime=0.0s bossHp=90
+PASS | L4 (BOSS) completes | {"level":4,"outcome":"complete","seconds":29.8,"kills":15,"leaked":0,"baseHp":8,"livesLeft":3,"bossSeen":true,"bossMaxSeen":90}
+PASS | L4 boss was present (hp seen) | bossHp max seen=90
+... L5 progress: state=playing kills=0 leaked=0 baseHp=8 levelTime=0.0s bossHp=null
+PASS | L5 completes | {"level":5,"outcome":"complete","seconds":34.5,"kills":32,"leaked":0,"baseHp":8,"livesLeft":3,"bossSeen":false,"bossMaxSeen":0}
+... L6 progress: state=playing kills=0 leaked=0 baseHp=8 levelTime=0.5s bossHp=null
+PASS | L6 completes | {"level":6,"outcome":"complete","seconds":42.7,"kills":34,"leaked":4,"baseHp":4,"livesLeft":3,"bossSeen":false,"bossMaxSeen":0}
+... L7 progress: state=playing kills=0 leaked=0 baseHp=8 levelTime=0.0s bossHp=null
+PASS | L7 completes | {"level":7,"outcome":"complete","seconds":40.6,"kills":43,"leaked":1,"baseHp":7,"livesLeft":3,"bossSeen":false,"bossMaxSeen":0}
+... L8 progress: state=playing kills=0 leaked=0 baseHp=8 levelTime=0.0s bossHp=150
+... L8 progress: state=complete kills=24 leaked=4 baseHp=8 levelTime=58.3s bossHp=null
+PASS | L8 (BOSS) completes | {"level":8,"outcome":"complete","seconds":58.3,"kills":24,"leaked":4,"baseHp":8,"livesLeft":3,"bossSeen":true,"bossMaxSeen":150}
+PASS | L8 boss was present (hp seen) | bossHp max seen=150
+... L9 progress: state=playing kills=0 leaked=0 baseHp=8 levelTime=0.1s bossHp=null
+PASS | L9 completes | {"level":9,"outcome":"complete","seconds":55.8,"kills":47,"leaked":3,"baseHp":5,"livesLeft":3,"bossSeen":false,"bossMaxSeen":0}
+... L10 progress: state=playing kills=0 leaked=0 baseHp=8 levelTime=0.1s bossHp=null
+... L10 progress: state=playing kills=46 leaked=6 baseHp=2 levelTime=58.2s bossHp=null
+PASS | L10 completes | {"level":10,"outcome":"complete","seconds":63.6,"kills":50,"leaked":6,"baseHp":2,"livesLeft":3,"bossSeen":false,"bossMaxSeen":0}
+... L11 progress: state=playing kills=0 leaked=0 baseHp=8 levelTime=0.0s bossHp=null
+... L11 progress: state=complete kills=58 leaked=6 baseHp=2 levelTime=57.3s bossHp=null
+PASS | L11 completes | {"level":11,"outcome":"complete","seconds":57.3,"kills":58,"leaked":6,"baseHp":2,"livesLeft":3,"bossSeen":false,"bossMaxSeen":0}
+... L12 progress: state=playing kills=0 leaked=0 baseHp=8 levelTime=0.1s bossHp=220
+... L12 progress: state=playing kills=22 leaked=15 baseHp=8 levelTime=59.1s bossHp=112
+PASS | L12 (BOSS) completes | {"level":12,"outcome":"victory","seconds":111.9,"kills":49,"leaked":29,"baseHp":8,"livesLeft":3,"bossSeen":true,"bossMaxSeen":220}
+PASS | L12 boss was present (hp seen) | bossHp max seen=220
+PASS | final: all 12 levels unlocked | {"unlocked":12,"stars":{"1":3,"2":3,"3":3,"4":3,"5":3,"6":1,"7":2,"8":1,"9":1,"10":1,"11":1},"score":61470}
+FAIL | final: stars recorded for all 12 | {"1":3,"2":3,"3":3,"4":3,"5":3,"6":1,"7":2,"8":1,"9":1,"10":1,"11":1}
+PASS | enemy variety: 12 distinct enemy images | enemy1.png,enemy2.png,enemy3.png,enemy4.png,enemy5.png,enemy6.png,enemy7.png,enemy8.png,enemy9.png,enemy10.png,enemy11.png,enemy12.png
+
+=== SUMMARY ===
+levels: {"1":{"level":1,"outcome":"complete","seconds":17.1,"kills":14,"leaked":0,"baseHp":8,"livesLeft":3,"bossSeen":false,"bossMaxSeen":0},"2":{"level":2,"outcome":"complete","seconds":24.1,"kills":20,"leaked":0,"baseHp":8,"livesLeft":3,"bossSeen":false,"bossMaxSeen":0},"3":{"level":3,"outcome":"complete","seconds":25.1,"kills":31,"leaked":0,"baseHp":8,"livesLeft":3,"bossSeen":false,"bossMaxSeen":0},"4":{"level":4,"outcome":"complete","seconds":29.8,"kills":15,"leaked":0,"baseHp":8,"livesLeft":3,"bossSeen":true,"bossMaxSeen":90},"5":{"level":5,"outcome":"complete","seconds":34.5,"kills":32,"leaked":0,"baseHp":8,"livesLeft":3,"bossSeen":false,"bossMaxSeen":0},"6":{"level":6,"outcome":"complete","seconds":42.7,"kills":34,"leaked":4,"baseHp":4,"livesLeft":3,"bossSeen":false,"bossMaxSeen":0},"7":{"level":7,"outcome":"complete","seconds":40.6,"kills":43,"leaked":1,"baseHp":7,"livesLeft":3,"bossSeen":false,"bossMaxSeen":0},"8":{"level":8,"outcome":"complete","seconds":58.3,"kills":24,"leaked":4,"baseHp":8,"livesLeft":3,"bossSeen":true,"bossMaxSeen":150},"9":{"level":9,"outcome":"complete","seconds":55.8,"kills":47,"leaked":3,"baseHp":5,"livesLeft":3,"bossSeen":false,"bossMaxSeen":0},"10":{"level":10,"outcome":"complete","seconds":63.6,"kills":50,"leaked":6,"baseHp":2,"livesLeft":3,"bossSeen":false,"bossMaxSeen":0},"11":{"level":11,"outcome":"complete","seconds":57.3,"kills":58,"leaked":6,"baseHp":2,"livesLeft":3,"bossSeen":false,"bossMaxSeen":0},"12":{"level":12,"outcome":"victory","seconds":111.9,"kills":49,"leaked":29,"baseHp":8,"livesLeft":3,"bossSeen":true,"bossMaxSeen":220}}
+total autopilot seconds: 560.8000000000001
+errors: 2 [
+  'CONSOLE: Failed to load resource: net::ERR_SSL_PROTOCOL_ERROR',
+  'CONSOLE: Failed to load resource: net::ERR_SSL_PROTOCOL_ERROR'
+]
+checks passed: 32/33

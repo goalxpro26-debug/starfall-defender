@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Starfall Defender — 12-Level Space Shooter</title>
+<!--
+  STARFALL DEFENDER — original HTML5 space shooter built for GameMonetize
+  account restoration. Vanilla JS + Canvas. All art (background.png,
+  player.png, enemy1..12.png, boss.png, powerups) and all audio
+  (*.wav) are original works generated in code — no stock, no copies.
+  GameId is a PLACEHOLDER: replace [YOUR GM GAME ID HERE] with the real
+  32-char gameId from the GameMonetize control panel before upload.
+  The game plays fully with the SDK absent (test links run that way).
+-->
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; background: #05060f; overflow: hidden;
+    font-family: "Segoe UI", Arial, sans-serif; color: #eaf2ff;
+    -webkit-user-select: none; user-select: none; }
+  #wrap { position: relative; width: 100%; max-width: 960px; height: 100%;
+    max-height: 640px; margin: 0 auto; top: 50%; transform: translateY(-50%); }
+  @media (max-aspect-ratio: 3/2) { #wrap { max-height: none; } }
+  canvas { display: block; width: 100%; height: 100%; background: #070a1e;
+    touch-action: none; border-radius: 6px; }
+  .screen { position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center;
+    background: rgba(5, 8, 24, 0.72); border-radius: 6px; z-index: 10; padding: 16px; }
+  /* The menu is taller than short viewports: let it scroll instead of
+     clipping the title (flex centering clips the top on overflow). */
+  #menuScreen { justify-content: flex-start; overflow-y: auto; padding-top: 10px; }
+  #menuScreen h1 { font-size: 38px; }
+  #menuScreen .tag { margin-bottom: 10px; }
+  #menuScreen .btn { padding: 10px 40px; }
+  #menuScreen .howto { padding: 10px 18px; margin: 8px 0; line-height: 1.5; }
+  #menuScreen .lvl { width: 54px; height: 52px; }
+  #menuScreen .grid { grid-template-columns: repeat(6, 54px); gap: 7px; margin: 6px 0 2px; }
+  .hidden { display: none !important; }
+  h1 { font-size: 52px; letter-spacing: 4px; color: #7dd8ff;
+    text-shadow: 0 0 18px #2a7fff, 0 0 42px #2a7fff; margin-bottom: 4px; }
+  h1 .star { color: #ffd94a; }
+  h2 { font-size: 30px; color: #ffd94a; margin-bottom: 10px; letter-spacing: 2px; }
+  .tag { font-size: 16px; color: #bcd6ff; margin-bottom: 18px; }
+  .btn { display: inline-block; background: linear-gradient(180deg, #2fa8ff, #1668d8);
+    color: #fff; border: 2px solid #9fd8ff; border-radius: 12px; cursor: pointer;
+    font-size: 24px; font-weight: 700; letter-spacing: 2px; padding: 14px 46px;
+    margin: 8px; box-shadow: 0 0 18px rgba(47,168,255,.6); }
+  .btn:hover { filter: brightness(1.15); }
+  .btn:active { transform: scale(0.97); }
+  .btn.small { font-size: 16px; padding: 9px 22px; }
+  .btn.gold { background: linear-gradient(180deg, #ffc93c, #d89100); border-color: #ffe9a8;
+    box-shadow: 0 0 18px rgba(255,201,60,.55); color: #231600; }
+  .btn.ghost { background: rgba(20,30,60,.8); box-shadow: none; }
+  .howto { background: rgba(10, 16, 40, 0.9); border: 1px solid #33507e; border-radius: 12px;
+    padding: 14px 20px; margin: 12px 0; font-size: 15px; line-height: 1.65; max-width: 640px;
+    text-align: left; }
+  .howto b { color: #ffd94a; }
+  .grid { display: grid; grid-template-columns: repeat(6, 58px); gap: 8px; margin: 10px 0 4px; }
+  .lvl { width: 58px; height: 58px; border-radius: 10px; border: 2px solid #33507e;
+    background: #101a38; color: #eaf2ff; font-size: 20px; font-weight: 700; cursor: pointer;
+    position: relative; line-height: 1.1; }
+  .lvl small { display: block; font-size: 11px; color: #ffd94a; letter-spacing: 0; }
+  .lvl.locked { opacity: 0.38; cursor: not-allowed; }
+  .lvl.boss { border-color: #ff5a5a; background: #3a1020; }
+  .lvl:hover:not(.locked) { border-color: #7dd8ff; }
+  .bar-outer { width: 420px; max-width: 86%; height: 26px; border: 2px solid #7dd8ff;
+    border-radius: 13px; overflow: hidden; background: #0a1230; margin-top: 14px; }
+  .bar-inner { height: 100%; width: 0%; background: linear-gradient(90deg, #2fa8ff, #7dffce);
+    transition: width 0.1s linear; }
+  #loadTip { margin-top: 12px; color: #bcd6ff; font-size: 15px; }
+  .stats { font-size: 18px; line-height: 1.9; color: #dfeaff; }
+  .stats b { color: #ffd94a; }
+  #hudBtns { position: absolute; top: 8px; right: 8px; z-index: 20; display: flex; gap: 6px; }
+  .icon-btn { width: 42px; height: 42px; border-radius: 10px; border: 2px solid #33507e;
+    background: rgba(10, 16, 40, 0.85); color: #fff; font-size: 20px; cursor: pointer; }
+  #fireBtn { position: absolute; right: 18px; bottom: 18px; z-index: 20; width: 84px; height: 84px;
+    border-radius: 50%; border: 3px solid #ff9d5c; background: rgba(200, 60, 20, 0.55);
+    color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; display: none; }
+  #fireBtn:active { background: rgba(255, 120, 40, 0.8); }
+  @media (pointer: coarse) { #fireBtn { display: block; } }
+  .foot { margin-top: 14px; font-size: 12px; color: #7f93b8; }
+  #adNote { position: absolute; left: 10px; bottom: 8px; z-index: 20; font-size: 11px;
+    color: #7f93b8; background: rgba(5,8,24,.6); padding: 2px 6px; border-radius: 4px; }
+</style>
+<script>
+  // ---- GameMonetize SDK (official loader). SDK_OPTIONS MUST precede it. ----
+  // STAGED BUILD — gameId placeholder. Replace "[YOUR GM GAME ID HERE]" with
+  // the real 32-char gameId from the GM control panel before portal upload.
+  window.SDK_OPTIONS = {
+    gameId: "[YOUR GM GAME ID HERE]",
+    onEvent: function (event) {
+      var h = window.__gmEventHandler;
+      if (typeof h === "function") h(event);
+      else (window.__gmEventQueue = window.__gmEventQueue || []).push(event);
+    }
+  };
+</script>
+<script>
+  (function (a, b, c) {
+    var d = a.getElementsByTagName(b)[0];
+    a.getElementById(c) || (a = a.createElement(b), a.id = c,
+      a.src = "https://api.gamemonetize.com/sdk.js", d.parentNode.insertBefore(a, d))
+  })(document, "script", "gamemonetize-sdk");
+</script>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game" width="960" height="640"></canvas>
+
+  <div id="hudBtns">
+    <button class="icon-btn" id="muteBtn" title="Mute / unmute (M)">&#128266;</button>
+    <button class="icon-btn" id="pauseBtn" title="Pause (P)">&#10074;&#10074;</button>
+  </div>
+  <button id="fireBtn">FIRE</button>
+  <div id="adNote">Starfall Defender — original game</div>
+
+  <!-- MAIN MENU -->
+  <div class="screen" id="menuScreen">
+    <h1><span class="star">&#9733;</span> STARFALL <span class="star">&#9733;</span><br>DEFENDER</h1>
+    <div class="tag">Defend the last starbase. 12 levels. 3 boss battles. Save your progress.</div>
+    <button class="btn" id="playBtn">&#9654; PLAY</button>
+    <button class="btn small ghost" id="continueBtn">CONTINUE — LEVEL 1</button>
+    <div class="howto">
+      <b>HOW TO PLAY</b><br>
+      &#8592;&#8593;&#8595;&#8594; or <b>WASD</b> to fly &nbsp;•&nbsp; <b>SPACE</b> (hold) to shoot &nbsp;•&nbsp; Mouse: move to steer, hold click to shoot<br>
+      Touch: drag to fly, ship fires automatically &nbsp;•&nbsp; <b>P</b> pause &nbsp;•&nbsp; <b>M</b> mute<br>
+      Destroy every enemy to clear a level. Enemies that slip past you hit the
+      starbase — lose all 8 starbase integrity and the level is lost. Grab <b style="color:#6db7ff">shield</b>, <b style="color:#ffa53c">double shot</b> and <b style="color:#6dff8a">health</b> power-ups.
+      Boss ships attack on levels <b>4, 8 and 12</b>. You have <b>3 lives</b> per level — good luck, pilot!
+    </div>
+    <div id="levelGridWrap">
+      <div style="font-size:14px;color:#9fb6dd">LEVEL SELECT — tap an unlocked level (&#9733; = stars earned)</div>
+      <div class="grid" id="levelGrid"></div>
+    </div>
+    <div class="foot">Progress saves in this browser automatically. Original art &amp; sound — no ads on load.</div>
+  </div>
+
+  <!-- 3-SECOND LOADING -->
+  <div class="screen hidden" id="loadingScreen">
+    <h2>LOADING LEVEL <span id="loadLevelNum">1</span></h2>
+    <div id="loadLevelName" style="font-size:18px;color:#bcd6ff">First Contact</div>
+    <div class="bar-outer"><div class="bar-inner" id="loadBar"></div></div>
+    <div id="loadTip">Charging lasers…</div>
+  </div>
+
+  <!-- PAUSED -->
+  <div class="screen hidden" id="pauseScreen">
+    <h2>PAUSED</h2>
+    <div class="tag">Take a breath, pilot. The stars will wait.</div>
+    <button class="btn" id="resumeBtn">RESUME</button>
+    <button class="btn small ghost" id="quitBtn">QUIT TO MENU</button>
+  </div>
+
+  <!-- LEVEL COMPLETE -->
+  <div class="screen hidden" id="completeScreen">
+    <h2>LEVEL CLEAR!</h2>
+    <div class="stats" id="completeStats"></div>
+    <button class="btn gold" id="nextBtn">NEXT LEVEL &#9654;</button>
+    <button class="btn small ghost" id="replayBtn">REPLAY LEVEL</button>
+    <button class="btn small ghost" id="menuBtn1">MENU</button>
+  </div>
+
+  <!-- GAME OVER -->
+  <div class="screen hidden" id="overScreen">
+    <h2 style="color:#ff7a7a">SHIP DESTROYED</h2>
+    <div class="stats" id="overStats"></div>
+    <button class="btn" id="retryBtn">TRY AGAIN</button>
+    <button class="btn small ghost" id="menuBtn2">MENU</button>
+  </div>
+
+  <!-- VICTORY -->
+  <div class="screen hidden" id="victoryScreen">
+    <h2>&#127942; GALAXY SAVED! &#127942;</h2>
+    <div class="stats" id="victoryStats"></div>
+    <button class="btn gold" id="againBtn">PLAY AGAIN FROM LEVEL 1</button>
+    <button class="btn small ghost" id="menuBtn3">MENU</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* =====================================================================
+   STARFALL DEFENDER — vanilla JS canvas shooter.
+   12 levels, distinct enemy model per level, bosses on 4/8/12,
+   localStorage saves, WebAudio + WAV sfx, GameMonetize SDK bridge.
+   ===================================================================== */
+const W = 960, H = 640;
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const SAVE_KEY = "starfallDefenderSaveV1";
+const MUTE_KEY = "starfallDefenderMuted";
+
+/* ---------------- level plan: one distinct enemy model per level ------ */
+const LEVELS = [
+  { name: "First Contact",   enemy: "enemy1.png",  foe: "Starling Drone",   quota: 14, hp: 1, speed: 55,  fire: 3.0, spawn: 1.15, max: 4, pattern: "drift" },
+  { name: "Beetle Swarm",    enemy: "enemy2.png",  foe: "Void Beetle",      quota: 20, hp: 1, speed: 65,  fire: 2.6, spawn: 1.00, max: 5, pattern: "sine" },
+  { name: "Wasp Nest",       enemy: "enemy3.png",  foe: "Ember Wasp",       quota: 26, hp: 1, speed: 88,  fire: 2.3, spawn: 0.90, max: 5, pattern: "dive" },
+  { name: "DREAD CAPTAIN",   enemy: "enemy4.png",  foe: "Crimson Cruiser",  quota: 10, hp: 1, speed: 70,  fire: 2.1, spawn: 1.00, max: 4, pattern: "drift", boss: true, bossHp: 90 },
+  { name: "Squid Tide",      enemy: "enemy5.png",  foe: "Tide Squid",       quota: 32, hp: 2, speed: 72,  fire: 2.0, spawn: 0.85, max: 6, pattern: "sine" },
+  { name: "Mantis Ambush",   enemy: "enemy6.png",  foe: "Thorn Mantis",     quota: 38, hp: 2, speed: 92,  fire: 1.9, spawn: 0.80, max: 6, pattern: "weave" },
+  { name: "Hornet Storm",    enemy: "enemy7.png",  foe: "Solar Hornet",     quota: 44, hp: 2, speed: 108, fire: 1.7, spawn: 0.75, max: 7, pattern: "dive" },
+  { name: "HIVE MATRIARCH",  enemy: "enemy8.png",  foe: "Abyss Destroyer",  quota: 10, hp: 2, speed: 80,  fire: 1.8, spawn: 0.95, max: 4, pattern: "weave", boss: true, bossHp: 150 },
+  { name: "Spider Web",      enemy: "enemy9.png",  foe: "Web Spider",       quota: 50, hp: 3, speed: 96,  fire: 1.6, spawn: 0.70, max: 7, pattern: "weave" },
+  { name: "Jelly Drift",     enemy: "enemy10.png", foe: "Mist Jelly",       quota: 56, hp: 3, speed: 62,  fire: 1.5, spawn: 0.65, max: 8, pattern: "sine", spread: true },
+  { name: "Phantom Fleet",   enemy: "enemy11.png", foe: "Ghost Phantom",    quota: 64, hp: 3, speed: 112, fire: 1.4, spawn: 0.60, max: 8, pattern: "blink" },
+  { name: "STARFALL SOVEREIGN", enemy: "enemy12.png", foe: "Gold Dreadnought", quota: 24, hp: 3, speed: 90, fire: 1.3, spawn: 0.80, max: 5, pattern: "drift", boss: true, bossHp: 220 },
+];
+const TOTAL_LEVELS = LEVELS.length;
+
+/* ---------------- save / progress ------------------------------------- */
+function defaultSave() { return { unlocked: 1, stars: {}, score: 0 }; }
+function loadSave() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SAVE_KEY) || "null");
+    if (s && typeof s.unlocked === "number") return Object.assign(defaultSave(), s);
+  } catch (e) { /* corrupted save -> fresh */ }
+  return defaultSave();
+}
+function storeSave() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
+let save = loadSave();
+
+/* ---------------- audio: WAV files + WebAudio synth fallback ---------- */
+let muted = false;
+try { muted = localStorage.getItem(MUTE_KEY) === "1"; } catch (e) {}
+const sfxFiles = { shoot: "shoot.wav", destroy: "destroy.wav", hit: "hit.wav",
+  win: "win.wav", lose: "lose.wav", powerup: "powerup.wav", thrust: "thrust.wav" };
+const sfxCache = {};
+let audioCtx = null, synthFallback = {};
+function ensureAudioCtx() {
+  if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+  if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+}
+function playWav(name) {
+  if (muted) return;
+  ensureAudioCtx();
+  try {
+    let a = sfxCache[name];
+    if (!a) { a = new Audio(sfxFiles[name]); a.preload = "auto"; sfxCache[name] = a;
+      a.addEventListener("error", () => { synthFallback[name] = true; }); }
+    if (synthFallback[name]) { synthBeep(name); return; }
+    const c = a.cloneNode(); c.volume = name === "shoot" ? 0.35 : 0.6; c.play().catch(() => synthBeep(name));
+  } catch (e) { synthBeep(name); }
+}
+function synthBeep(name) { // tiny oscillator fallback if a WAV cannot play
+  if (muted || !audioCtx) return;
+  try {
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    const f = { shoot: 660, destroy: 140, hit: 180, win: 880, lose: 220, powerup: 990, thrust: 160 }[name] || 440;
+    o.type = name === "destroy" ? "sawtooth" : "sine"; o.frequency.value = f;
+    g.gain.setValueAtTime(0.18, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.22);
+    o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + 0.25);
+  } catch (e) {}
+}
+let ambientEl = null;
+function startAmbient() {
+  if (muted) return;
+  try {
+    if (!ambientEl) { ambientEl = new Audio("ambient.wav"); ambientEl.loop = true; ambientEl.volume = 0.35; }
+    ambientEl.play().catch(() => {});
+  } catch (e) {}
+}
+function setMuted(m) {
+  muted = m;
+  try { localStorage.setItem(MUTE_KEY, m ? "1" : "0"); } catch (e) {}
+  if (ambientEl) ambientEl.muted = m;
+  document.getElementById("muteBtn").innerHTML = m ? "&#128263;" : "&#128266;";
+}
+function applyMuteToAudio(paused) { // GM ad mute: pause ambient, keep user mute state
+  if (ambientEl) { if (paused) ambientEl.pause(); else if (!muted) ambientEl.play().catch(() => {}); }
+}
+
+/* ---------------- images ------------------------------------------------ */
+const IMG = {};
+function loadImage(name) {
+  return new Promise((res) => {
+    const im = new Image();
+    im.onload = () => res(im); im.onerror = () => res(null);
+    im.src = name;
+  });
+}
+async function loadAllImages() {
+  const names = ["background.png", "player.png", "boss.png",
+    "powerup_shield.png", "powerup_double.png", "powerup_health.png"]
+    .concat(LEVELS.map(l => l.enemy));
+  for (const n of names) IMG[n] = await loadImage(n);
+}
+
+/* ---------------- GameMonetize bridge (per CONVERSION-PLAN.md §3) ------ */
+const GM = (function () {
+  let bridgePaused = false, bridgeMuted = false, preRollShown = false;
+  let adInFlight = false, adTimer = undefined, midRollCalls = 0;
+  function gmSdk() {
+    const s = window.sdk;
+    return (s && typeof s.showBanner === "function") ? s : null;
+  }
+  function clearAdInFlight() { adInFlight = false; if (adTimer !== undefined) { clearTimeout(adTimer); adTimer = undefined; } }
+  function showBanner() { // live re-check on every call; never snapshot availability
+    const live = gmSdk();
+    if (!live || adInFlight) return;
+    adInFlight = true;
+    try { live.showBanner(); adTimer = setTimeout(clearAdInFlight, 60000); }
+    catch (e) { clearAdInFlight(); }
+  }
+  function onPause() { // SDK_GAME_PAUSE: pause + mute (mandatory during ads)
+    try {
+      if (pauseGame(true)) bridgePaused = true;
+      else if (!bridgeMuted) { applyMuteToAudio(true); bridgeMuted = true; }
+    } catch (e) {}
+  }
+  function onResume() { // SDK_GAME_START: resume + unmute; never force a menu into play
+    try {
+      clearAdInFlight();
+      if (bridgePaused) { if (resumeGame(true)) bridgePaused = false; else bridgePaused = false; }
+      else if (bridgeMuted) { applyMuteToAudio(false); bridgeMuted = false; }
+    } catch (e) { bridgePaused = false; bridgeMuted = false; }
+  }
+  function handleEvent(ev) {
+    if (!ev || typeof ev.name !== "string") return;
+    if (ev.name === "SDK_GAME_PAUSE") onPause();
+    else if (ev.name === "SDK_GAME_START") onResume();
+    // SDK_READY: availability is a live getter, nothing to store.
+  }
+  let handlersRegistered = false;
+  try {
+    const q = window.__gmEventQueue || []; window.__gmEventQueue = [];
+    q.forEach(handleEvent);
+    window.__gmEventHandler = handleEvent;
+    handlersRegistered = true;
+  } catch (e) { handlersRegistered = false; }
+  window.__gamemonetize = {
+    get available() { return gmSdk() !== null; },
+    get handlersRegistered() { return handlersRegistered; },
+    get preRollShown() { return preRollShown; },
+    get midRollCalls() { return midRollCalls; },
+    get pausedByGM() { return bridgePaused; },
+    get mutedByGM() { return bridgeMuted; },
+    simulatePause: onPause, simulateResume: onResume,
+  };
+  return {
+    get available() { return gmSdk() !== null; },
+    notifyPlayPressed() { // pre-roll, exactly once, on the PLAY button only — never on load
+      if (preRollShown) return; preRollShown = true; showBanner();
+    },
+  };
+})();
+
+/* ---------------- game state -------------------------------------------- */
+let state = "menu";           // menu | loading | playing | paused | complete | over | victory
+let levelIndex = 0;           // 0-based
+let score = 0, lives = 3, livesLostThisLevel = 0;
+let kills = 0, spawnedTotal = 0, leaked = 0, baseHp = 5;
+const BASE_HP_MAX = 8;
+let player = null, bullets = [], ebullets = [], enemies = [], particles = [], powerups = [], boss = null;
+let spawnTimer = 0, fireTimer = 0, shake = 0, elapsed = 0, levelTime = 0;
+let flashMsg = "", flashUntil = 0, baseDestroyed = false;
+let shieldUntil = 0, doubleUntil = 0, invulnUntil = 0;
+let starsBg = [];
+let keys = {};
+let mouse = { x: W / 2, y: H - 100, down: false, active: false };
+let touch = { x: W / 2, y: H - 100, active: false };
+let autopilot = false, godMode = false;
+let levelStartStamp = 0;
+const levelTimes = {};        // level -> seconds (autopilot + manual runs)
+let totalPlaySeconds = 0;
+
+function newPlayer() {
+  return { x: W / 2, y: H - 110, r: 26, speed: 380, alive: true };
+}
+function resetLevel(n) {
+  levelIndex = n;
+  const L = LEVELS[n];
+  player = newPlayer();
+  bullets = []; ebullets = []; enemies = []; particles = []; powerups = [];
+  boss = null; kills = 0; spawnedTotal = 0; leaked = 0; baseHp = BASE_HP_MAX;
+  baseDestroyed = false; flashMsg = ""; flashUntil = 0;
+  lives = 3; livesLostThisLevel = 0;
+  spawnTimer = 0.5; fireTimer = 0; levelTime = 0;
+  shieldUntil = 0; doubleUntil = 0; invulnUntil = 0;
+  if (L.boss) spawnBoss();
+}
+function spawnBoss() {
+  const L = LEVELS[levelIndex];
+  boss = { x: W / 2, y: 110, r: 86, hp: L.bossHp, maxHp: L.bossHp, t: 0,
+           dir: 1, fireT: 2.0, phase: 0, img: IMG["boss.png"] };
+}
+function spawnEnemy() {
+  const L = LEVELS[levelIndex];
+  const x = 50 + Math.random() * (W - 100);
+  const e = { x, y: -40, r: 26, hp: L.hp, speed: L.speed * (0.9 + Math.random() * 0.25),
+    fireT: L.fire * (0.7 + Math.random() * 0.8), t: Math.random() * 6.28,
+    baseX: x, pattern: L.pattern, img: IMG[L.enemy], blinkT: 0, score: 100 + levelIndex * 10 };
+  enemies.push(e); spawnedTotal++;
+}
+function spawnPowerup(x, y) {
+  const types = ["shield", "double", "health"];
+  const type = types[Math.floor(Math.random() * types.length)];
+  powerups.push({ x, y, r: 20, type, vy: 70,
+    img: IMG["powerup_" + type + ".png"] });
+}
+function burst(x, y, color, n) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * 6.283, sp = 60 + Math.random() * 220;
+    particles.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+      life: 0.5 + Math.random() * 0.4, color, r: 2 + Math.random() * 3 });
+  }
+}
+
+/* ---------------- screens / flow ---------------------------------------- */
+const $ = (id) => document.getElementById(id);
+function show(id) { $(id).classList.remove("hidden"); }
+function hide(id) { $(id).classList.add("hidden"); }
+function hideAllScreens() {
+  ["menuScreen", "loadingScreen", "pauseScreen", "completeScreen", "overScreen", "victoryScreen"]
+    .forEach(hide);
+}
+function starsForLevel(n) { return save.stars[n + 1] || 0; }
+function renderMenu() {
+  state = "menu";
+  hideAllScreens(); show("menuScreen");
+  const next = Math.min(save.unlocked, TOTAL_LEVELS);
+  const cont = $("continueBtn");
+  cont.textContent = save.unlocked >= TOTAL_LEVELS && starsForLevel(TOTAL_LEVELS - 1)
+    ? "CONTINUE — ALL LEVELS CLEAR ★" : "CONTINUE — LEVEL " + next;
+  const grid = $("levelGrid"); grid.innerHTML = "";
+  LEVELS.forEach((L, i) => {
+    const b = document.createElement("button");
+    const unlocked = i + 1 <= save.unlocked;
+    const st = starsForLevel(i);
+    b.className = "lvl" + (unlocked ? "" : " locked") + (L.boss ? " boss" : "");
+    b.innerHTML = (i + 1) + (L.boss ? "<small>BOSS</small>" : "<small>" + ("★".repeat(st) || "—") + "</small>");
+    b.title = L.name + (L.boss ? " (boss)" : "");
+    if (unlocked) b.addEventListener("click", () => pressPlay(i));
+    grid.appendChild(b);
+  });
+}
+function pressPlay(n) {
+  // PLAY button path: the ONLY place an ad is ever requested (pre-roll, once).
+  GM.notifyPlayPressed();
+  ensureAudioCtx(); startAmbient(); playWav("thrust");
+  const target = (typeof n === "number") ? n : Math.min(save.unlocked, TOTAL_LEVELS) - 1;
+  levelStartStamp = performance.now();
+  // 3-second loading before the level starts.
+  state = "loading";
+  hideAllScreens(); show("loadingScreen");
+  $("loadLevelNum").textContent = target + 1;
+  $("loadLevelName").textContent = LEVELS[target].name +
+    (LEVELS[target].boss ? " — BOSS BATTLE" : " — vs " + LEVELS[target].foe);
+  const tips = ["Charging lasers…", "Calibrating shields…", "Loading " + LEVELS[target].foe + " models…",
+    "Plotting the starfield…", "Warming up the engines…"];
+  $("loadTip").textContent = tips[Math.floor(Math.random() * tips.length)];
+  const bar = $("loadBar"); bar.style.width = "0%";
+  const t0 = performance.now();
+  (function tick() {
+    const p = Math.min(1, (performance.now() - t0) / 3000);
+    bar.style.width = (p * 100).toFixed(0) + "%";
+    if (p < 1 && state === "loading") requestAnimationFrame(tick);
+    else if (state === "loading") { resetLevel(target); state = "playing"; hideAllScreens(); }
+  })();
+}
+function pauseGame(fromGM) {
+  if (state !== "playing") return false;
+  state = "paused"; show("pauseScreen"); applyMuteToAudio(true);
+  return true;
+}
+function resumeGame(fromGM) {
+  if (state !== "paused") return false;
+  state = "playing"; hide("pauseScreen"); applyMuteToAudio(false);
+  return true;
+}
+function levelComplete() {
+  state = "complete";
+  const L = LEVELS[levelIndex];
+  const stars = (livesLostThisLevel === 0 && leaked === 0) ? 3
+    : (livesLostThisLevel <= 1 && leaked <= 2) ? 2 : 1;
+  const prev = save.stars[levelIndex + 1] || 0;
+  save.stars[levelIndex + 1] = Math.max(prev, stars);
+  save.unlocked = Math.max(save.unlocked, Math.min(TOTAL_LEVELS, levelIndex + 2));
+  save.score = Math.max(save.score, score);
+  storeSave();
+  levelTimes[levelIndex + 1] = levelTime;
+  playWav("win");
+  $("completeStats").innerHTML =
+    "Level " + (levelIndex + 1) + " — <b>" + L.name + "</b> clear!<br>" +
+    "Stars: <b>" + "★".repeat(stars) + "☆".repeat(3 - stars) + "</b><br>" +
+    "Score: <b>" + score + "</b> &nbsp;•&nbsp; Time: <b>" + fmtTime(levelTime) + "</b><br>" +
+    "Destroyed: <b>" + kills + "</b> &nbsp;•&nbsp; Leaked past you: <b>" + leaked + "</b><br>" +
+    "Progress saved — level " + Math.min(TOTAL_LEVELS, levelIndex + 2) + " unlocked.";
+  hideAllScreens(); show("completeScreen");
+  if (levelIndex + 1 >= TOTAL_LEVELS) { /* final level -> victory handled below */ }
+}
+function gameOver(byBase) {
+  state = "over"; playWav("lose");
+  levelTimes[levelIndex + 1] = levelTime;
+  $("overStats").innerHTML =
+    (byBase ? "<b>STARBASE DESTROYED</b> — too many enemies slipped past!<br>"
+            : "Level " + (levelIndex + 1) + " — <b>" + LEVELS[levelIndex].name + "</b><br>") +
+    "Score: <b>" + score + "</b> &nbsp;•&nbsp; Enemies destroyed: <b>" + kills + "</b>" +
+    " &nbsp;•&nbsp; Leaked: <b>" + leaked + "</b><br>" +
+    "Your progress up to level " + save.unlocked + " is saved. Try again!";
+  hideAllScreens(); show("overScreen");
+}
+function victory() {
+  state = "victory"; playWav("win");
+  // Record level-12 stars exactly like levelComplete() does — the final
+  // level reaches victory() directly, so without this its stars were lost.
+  const stars = (livesLostThisLevel === 0 && leaked === 0) ? 3
+    : (livesLostThisLevel <= 1 && leaked <= 2) ? 2 : 1;
+  save.stars[TOTAL_LEVELS] = Math.max(save.stars[TOTAL_LEVELS] || 0, stars);
+  save.unlocked = TOTAL_LEVELS;
+  save.score = Math.max(save.score, score);
+  storeSave();
+  levelTimes[TOTAL_LEVELS] = levelTime;
+  $("victoryStats").innerHTML =
+    "All <b>12 levels</b> cleared — the galaxy is safe!<br>" +
+    "Final score: <b>" + score + "</b><br>" +
+    "Total stars: <b>" + Object.values(save.stars).reduce((a, b) => a + b, 0) + " / 36</b><br>" +
+    "Session play time: <b>" + fmtTime(total) + "</b>";
+  hideAllScreens(); show("victoryScreen");
+}
+function fmtTime(s) {
+  const m = Math.floor(s / 60), ss = Math.floor(s % 60);
+  return m + ":" + String(ss).padStart(2, "0");
+}
+function damagePlayer() {
+  if (godMode || elapsed < invulnUntil) return;
+  if (elapsed < shieldUntil) { // shield absorbs the hit
+    shieldUntil = 0; invulnUntil = elapsed + 1.2; playWav("hit");
+    burst(player.x, player.y, "#6db7ff", 18); return;
+  }
+  lives--; livesLostThisLevel++; playWav("hit"); shake = 10;
+  burst(player.x, player.y, "#ff8040", 26);
+  if (lives <= 0) { player.alive = false; burst(player.x, player.y, "#ffd94a", 60); gameOver(); }
+  else invulnUntil = elapsed + 2.0;
+}
+
+/* ---------------- update ------------------------------------------------- */
+function update(dt) {
+  elapsed += dt; levelTime += dt; totalPlaySeconds += dt;
+  const L = LEVELS[levelIndex];
+  // --- autopilot (test hook): steer to nearest foe, dodge bullets, fire ---
+  if (autopilot && player.alive) {
+    let tx = player.x, ty = H - 130;
+    // Target the LOWEST enemy first (closest to the starbase — the one
+    // about to leak), breaking ties by horizontal distance. During a boss
+    // fight the boss is the target, diverting only for an enemy about to
+    // leak (near the base). That mirrors good human play.
+    let target = boss || null, bestY = -1, bestD = 1e9;
+    enemies.forEach(e => {
+      if (boss && e.y < H - 140) return; // boss first; only leakers divert
+      const d = Math.abs(e.x - player.x);
+      if (e.y > bestY || (e.y === bestY && d < bestD)) { bestY = e.y; bestD = d; target = e; }
+    });
+    if (target) { tx = target.x; ty = Math.min(H - 90, Math.max(H - 220, target.y + 260)); }
+    // dodge: nearest enemy bullet heading for us
+    ebullets.forEach(b => {
+      if (b.y > player.y - 140 && b.y < player.y && Math.abs(b.x - player.x) < 70)
+        tx += (b.x < player.x ? 90 : -90);
+    });
+    const dx = tx - player.x, dy = ty - player.y;
+    player.x += Math.max(-player.speed * dt, Math.min(player.speed * dt, dx));
+    player.y += Math.max(-player.speed * dt, Math.min(player.speed * dt, dy));
+    mouse.down = true;
+  } else {
+    // keyboard
+    let mx = 0, my = 0;
+    if (keys["ArrowLeft"] || keys["a"] || keys["A"]) mx -= 1;
+    if (keys["ArrowRight"] || keys["d"] || keys["D"]) mx += 1;
+    if (keys["ArrowUp"] || keys["w"] || keys["W"]) my -= 1;
+    if (keys["ArrowDown"] || keys["s"] || keys["S"]) my += 1;
+    if (mx || my) {
+      const n = Math.hypot(mx, my);
+      player.x += mx / n * player.speed * dt;
+      player.y += my / n * player.speed * dt;
+      if (my) playThrustTick();
+    }
+    // mouse steer (when mouse moved recently) / touch drag
+    if (touch.active) { player.x += (touch.x - player.x) * Math.min(1, dt * 14); player.y += (touch.y - player.y) * Math.min(1, dt * 14); }
+    else if (mouse.active && !keys[" "]) {
+      player.x += (mouse.x - player.x) * Math.min(1, dt * 10);
+      player.y += (mouse.y - player.y) * Math.min(1, dt * 10);
+    }
+    if (keys[" "]) mouse.down = true;
+  }
+  player.x = Math.max(30, Math.min(W - 30, player.x));
+  player.y = Math.max(H * 0.35, Math.min(H - 40, player.y));
+
+  // --- firing ---
+  fireTimer -= dt;
+  const firing = autopilot || mouse.down || keys[" "] || touch.active;
+  if (firing && fireTimer <= 0 && player.alive) {
+    fireTimer = 0.18;
+    const dbl = elapsed < doubleUntil;
+    bullets.push({ x: player.x, y: player.y - 28, vx: 0, vy: -560, r: 5 });
+    if (dbl) { bullets.push({ x: player.x - 14, y: player.y - 20, vx: -40, vy: -540, r: 5 });
+               bullets.push({ x: player.x + 14, y: player.y - 20, vx: 40, vy: -540, r: 5 }); }
+    playWav("shoot");
+  }
+
+  // --- spawning (non-boss quota; boss levels spawn escorts until boss dies) ---
+  spawnTimer -= dt;
+  const wantMore = L.boss ? (boss && enemies.length < L.max) : (spawnedTotal < L.quota && enemies.length < L.max);
+  if (wantMore && spawnTimer <= 0) { spawnEnemy(); spawnTimer = L.spawn * (0.8 + Math.random() * 0.5); }
+
+  // --- enemies ---
+  enemies.forEach(e => {    e.t += dt;
+    if (e.pattern === "sine") { e.y += e.speed * dt; e.x = e.baseX + Math.sin(e.t * 2.2) * 50; }
+    else if (e.pattern === "dive") {
+      if (e.y < 140) e.y += e.speed * dt;
+      else { e.y += e.speed * 2.1 * dt; e.x += (player.x - e.x) * 0.6 * dt; }
+    } else if (e.pattern === "weave") {
+      e.y += e.speed * 0.8 * dt; e.x = e.baseX + Math.sin(e.t * 3.1) * 90;
+    } else if (e.pattern === "blink") {
+      e.y += e.speed * 0.7 * dt;
+      e.blinkT -= dt;
+      if (e.blinkT <= 0 && e.y > 40 && e.y < H * 0.6) {
+        e.x = 50 + Math.random() * (W - 100); e.blinkT = 2.2 + Math.random() * 1.5;
+        burst(e.x, e.y, "#c9b8ff", 10);
+      }
+    } else { e.y += e.speed * dt; e.x = e.baseX + Math.sin(e.t * 1.4) * 30; } // drift
+    e.x = Math.max(24, Math.min(W - 24, e.x));
+    // enemy shoots at the player
+    e.fireT -= dt;
+    if (e.fireT <= 0 && e.y > 0 && e.y < player.y - 40) {
+      e.fireT = L.fire * (0.8 + Math.random() * 0.5);
+      const dx = player.x - e.x, dy = player.y - e.y, d = Math.hypot(dx, dy) || 1;
+      const bs = 250 + levelIndex * 9;
+      const spread = L.spread ? [-0.22, 0, 0.22] : [0];
+      spread.forEach(a => {
+        const ca = Math.cos(a), sa = Math.sin(a);
+        ebullets.push({ x: e.x, y: e.y + 20, vx: (dx / d * ca - dy / d * sa) * bs,
+                        vy: (dx / d * sa + dy / d * ca) * bs, r: 6 });
+      });
+      if (Math.random() < 0.4) playWav("shoot");
+    }
+  });
+  // Enemies that slip past the player hit the starbase. They count toward
+  // level progress (so the level can never softlock on escaped enemies),
+  // but each one damages base integrity (non-boss levels). Lose all 5 and
+  // the starbase falls. In boss levels escorts are just driven off.
+  const stillFlying = [];
+  enemies.forEach(e => {
+    if (e.y >= H + 60) {
+      leaked++;
+      if (!L.boss) {
+        baseHp--; score = Math.max(0, score - 150); shake = 8; playWav("hit");
+        burst(e.x, H - 20, "#ff3b3b", 20);
+        flashMsg = "STARBASE HIT!"; flashUntil = elapsed + 1.2;
+        if (baseHp <= 0) { baseDestroyed = true; }
+      }
+    } else stillFlying.push(e);
+  });
+  enemies = stillFlying;
+
+  // --- boss ---
+  if (boss) {
+    boss.t += dt; boss.phase = Math.floor(boss.t / 8) % 3;
+    boss.x += boss.dir * (70 + levelIndex * 6) * dt;
+    if (boss.x < 110 || boss.x > W - 110) boss.dir *= -1;
+    boss.y = 105 + Math.sin(boss.t * 0.8) * 22;
+    boss.fireT -= dt;
+    if (boss.fireT <= 0) {
+      boss.fireT = boss.phase === 2 ? 0.55 : 1.05;
+      const dx = player.x - boss.x, dy = player.y - boss.y, d = Math.hypot(dx, dy) || 1;
+      const bs = 300;
+      if (boss.phase === 0) { // aimed triple
+        [-0.18, 0, 0.18].forEach(a => {
+          ebullets.push({ x: boss.x, y: boss.y + 60, vx: dx / d * bs * Math.cos(a) - dy / d * bs * Math.sin(a),
+                          vy: dx / d * bs * Math.sin(a) + dy / d * bs * Math.cos(a), r: 7 });
+        });
+      } else if (boss.phase === 1) { // radial fan
+        for (let k = -2; k <= 2; k++)
+          ebullets.push({ x: boss.x, y: boss.y + 60, vx: k * 70, vy: 260, r: 7 });
+      } else { // sweeping stream
+        ebullets.push({ x: boss.x + Math.sin(boss.t * 3) * 60, y: boss.y + 60, vx: 0, vy: 330, r: 7 });
+      }
+      playWav("shoot");
+    }
+  }
+
+  // --- bullets ---
+  bullets.forEach(b => { b.x += b.vx * dt; b.y += b.vy * dt; });
+  bullets = bullets.filter(b => b.y > -20 && b.x > -20 && b.x < W + 20);
+  ebullets.forEach(b => { b.x += b.vx * dt; b.y += b.vy * dt; });
+  ebullets = ebullets.filter(b => b.y < H + 20 && b.y > -20 && b.x > -20 && b.x < W + 20);
+
+  // --- collisions: player bullets vs enemies / boss ---
+  bullets.forEach(b => {
+    if (b.dead) return;
+    enemies.forEach(e => {
+      if (!b.dead && Math.hypot(b.x - e.x, b.y - e.y) < e.r + b.r + 4) {
+        b.dead = true; e.hp--;
+        burst(b.x, b.y, "#ffd94a", 6);
+        if (e.hp <= 0) { e.dead = true; kills++; score += e.score;
+          burst(e.x, e.y, "#ff9040", 22); playWav("destroy");
+          if (Math.random() < 0.13) spawnPowerup(e.x, e.y); }
+      }
+    });
+    if (boss && !b.dead && Math.hypot(b.x - boss.x, b.y - boss.y) < boss.r) {
+      b.dead = true; boss.hp--; burst(b.x, b.y, "#ff5a5a", 8);
+      if (boss.hp <= 0) {
+        score += 1000 + levelIndex * 250;
+        burst(boss.x, boss.y, "#ffd94a", 80); burst(boss.x, boss.y, "#ff5a5a", 60);
+        playWav("destroy"); shake = 14; boss = null;
+        enemies.forEach(e => { burst(e.x, e.y, "#ff9040", 14); }); enemies = [];
+        ebullets = [];
+      }
+    }
+  });
+  bullets = bullets.filter(b => !b.dead);
+  enemies = enemies.filter(e => !e.dead);
+
+  // --- enemy bullets / enemies vs player ---
+  if (player.alive) {
+    ebullets.forEach(b => {
+      if (!b.dead && Math.hypot(b.x - player.x, b.y - player.y) < player.r + b.r - 6) {
+        b.dead = true; damagePlayer();
+      }
+    });
+    ebullets = ebullets.filter(b => !b.dead);
+    enemies.forEach(e => {
+      if (!e.dead && Math.hypot(e.x - player.x, e.y - player.y) < e.r + player.r - 8) {
+        e.dead = true; kills++; score += e.score; burst(e.x, e.y, "#ff9040", 22);
+        playWav("destroy"); damagePlayer();
+      }
+    });
+    enemies = enemies.filter(e => !e.dead);
+    powerups.forEach(p => {
+      p.y += p.vy * dt;
+      if (Math.hypot(p.x - player.x, p.y - player.y) < p.r + player.r) {
+        p.dead = true; playWav("powerup");
+        if (p.type === "shield") shieldUntil = elapsed + 20;
+        else if (p.type === "double") doubleUntil = elapsed + 15;
+        else if (p.type === "health") { if (lives < 3) lives++; else score += 500; }
+        burst(p.x, p.y, "#7dffce", 16);
+      }
+    });
+    powerups = powerups.filter(p => !p.dead && p.y < H + 30);
+  }
+
+  // --- particles / shake ---
+  particles.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; });
+  particles = particles.filter(p => p.life > 0);
+  if (shake > 0) shake = Math.max(0, shake - dt * 30);
+
+  // --- win check ---
+  if (state === "playing") {
+    if (L.boss) { if (!boss) { if (levelIndex + 1 >= TOTAL_LEVELS) victory(); else levelComplete(); } }
+    else if (kills + leaked >= L.quota && enemies.length === 0) {
+      if (levelIndex + 1 >= TOTAL_LEVELS) victory(); else levelComplete();
+    }
+    if (baseDestroyed && state === "playing") gameOver(true);
+  }
+}
+let lastThrust = 0;
+function playThrustTick() {
+  if (elapsed - lastThrust > 1.6) { lastThrust = elapsed; playWav("thrust"); }
+}
+
+/* ---------------- render ------------------------------------------------- */
+function initStars() {
+  starsBg = [];
+  for (let i = 0; i < 90; i++)
+    starsBg.push({ x: Math.random() * W, y: Math.random() * H, s: Math.random() * 1.8 + 0.6, v: 12 + Math.random() * 40 });
+}
+initStars();
+function drawHeart(x, y, s, filled) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(s / 16, s / 16);
+  ctx.beginPath();
+  ctx.moveTo(0, 5); ctx.bezierCurveTo(-9, -4, -5, -12, 0, -6); ctx.bezierCurveTo(5, -12, 9, -4, 0, 5);
+  ctx.fillStyle = filled ? "#ff4d6d" : "rgba(255,77,109,0.25)";
+  ctx.fill(); ctx.strokeStyle = "#fff"; ctx.lineWidth = 1.2; ctx.stroke(); ctx.restore();
+}
+function render() {
+  ctx.save();
+  if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+  const bg = IMG["background.png"];
+  if (bg) ctx.drawImage(bg, 0, 0, W, H);
+  else { ctx.fillStyle = "#070a1e"; ctx.fillRect(0, 0, W, H); }
+  // parallax stars
+  ctx.fillStyle = "#fff";
+  starsBg.forEach(s => {
+    s.y += s.v * 0.016; if (s.y > H) { s.y = 0; s.x = Math.random() * W; }
+    ctx.globalAlpha = 0.5; ctx.fillRect(s.x, s.y, s.s, s.s);
+  });
+  ctx.globalAlpha = 1;
+  if (state === "playing" || state === "paused") {
+    // power-ups
+    powerups.forEach(p => { if (p.img) ctx.drawImage(p.img, p.x - 20, p.y - 20, 40, 40); });
+    // enemies
+    enemies.forEach(e => {
+      if (e.img) ctx.drawImage(e.img, e.x - 30, e.y - 30, 60, 60);
+      if (e.hp > 1) { ctx.fillStyle = "#ff5a5a"; ctx.fillRect(e.x - 16, e.y - 38, 32 * (e.hp / LEVELS[levelIndex].hp), 4); }
+    });
+    // boss
+    if (boss && boss.img) {
+      ctx.drawImage(boss.img, boss.x - 110, boss.y - 82, 220, 165);
+      ctx.fillStyle = "rgba(0,0,0,.55)"; ctx.fillRect(W / 2 - 160, 14, 320, 16);
+      ctx.fillStyle = "#ff3b3b"; ctx.fillRect(W / 2 - 160, 14, 320 * Math.max(0, boss.hp / boss.maxHp), 16);
+      ctx.strokeStyle = "#fff"; ctx.strokeRect(W / 2 - 160, 14, 320, 16);
+      ctx.fillStyle = "#fff"; ctx.font = "bold 12px Arial"; ctx.textAlign = "center";
+      ctx.fillText(LEVELS[levelIndex].name, W / 2, 42);
+    }
+    // player
+    if (player && player.alive) {
+      const blink = elapsed < invulnUntil && Math.floor(elapsed * 12) % 2 === 0;
+      if (!blink && IMG["player.png"]) ctx.drawImage(IMG["player.png"], player.x - 30, player.y - 30, 60, 60);
+      if (elapsed < shieldUntil) {
+        ctx.beginPath(); ctx.arc(player.x, player.y, 42, 0, 6.283);
+        ctx.strokeStyle = "rgba(109,183,255,0.9)"; ctx.lineWidth = 3; ctx.stroke();
+      }
+    }
+    // bullets
+    bullets.forEach(b => {
+      ctx.fillStyle = "#7de3ff"; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 6.283); ctx.fill();
+      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(b.x, b.y, 2, 0, 6.283); ctx.fill();
+    });
+    ebullets.forEach(b => {
+      ctx.fillStyle = "#ff5a6e"; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 6.283); ctx.fill();
+      ctx.fillStyle = "#ffd0d0"; ctx.beginPath(); ctx.arc(b.x, b.y, 2.5, 0, 6.283); ctx.fill();
+    });
+    // particles
+    particles.forEach(p => {
+      ctx.globalAlpha = Math.max(0, p.life * 2);
+      ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.283); ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    // HUD
+    ctx.textAlign = "left"; ctx.font = "bold 15px Arial";
+    for (let i = 0; i < 3; i++) drawHeart(26 + i * 30, 26, 15, i < lives);
+    ctx.fillStyle = "#fff";
+    ctx.fillText("SCORE " + score, 14, 58);
+    ctx.fillText("LEVEL " + (levelIndex + 1) + "/12 — " + LEVELS[levelIndex].name, 14, 80);
+    const L = LEVELS[levelIndex];
+    const prog = L.boss ? (boss ? "BOSS: " + Math.max(0, boss.hp) + " HP" : "BOSS DOWN!")
+      : "DESTROYED " + Math.min(kills, L.quota) + " / " + L.quota +
+        (leaked ? "  •  LEAKED " + leaked : "");
+    ctx.fillStyle = "#ffd94a"; ctx.fillText(prog, 14, 102);
+    if (!L.boss) {
+      ctx.fillStyle = baseHp > 2 ? "#7dffce" : "#ff7a7a";
+      ctx.fillText("STARBASE " + "▮".repeat(Math.max(0, baseHp)) + "▯".repeat(Math.max(0, BASE_HP_MAX - baseHp)), 14, 124);
+    }
+    if (elapsed < flashUntil && flashMsg) {
+      ctx.textAlign = "center"; ctx.fillStyle = "#ff5a5a"; ctx.font = "bold 26px Arial";
+      ctx.fillText(flashMsg, W / 2, H / 2 - 120); ctx.textAlign = "left"; ctx.font = "bold 15px Arial";
+    }
+    if (elapsed < doubleUntil) { ctx.fillStyle = "#ffa53c"; ctx.fillText("DOUBLE SHOT " + Math.ceil(doubleUntil - elapsed) + "s", 14, 146); }
+    if (elapsed < shieldUntil) { ctx.fillStyle = "#6db7ff"; ctx.fillText("SHIELD " + Math.ceil(shieldUntil - elapsed) + "s", 14, elapsed < doubleUntil ? 168 : 146); }
+    ctx.textAlign = "right"; ctx.fillStyle = "#9fb6dd"; ctx.font = "13px Arial";
+    ctx.fillText("foe: " + L.foe, W - 14, 80);
+  }
+  ctx.restore();
+}
+
+/* ---------------- main loop ---------------------------------------------- */
+// dt cap: 0.05 s by default (real 60 fps play never hits it). Headless QA
+// may pass ?dtcap=0.12 to keep game time close to wall time on a slow
+// software renderer; it changes nothing at 60 fps.
+const DT_CAP = (() => {
+  const v = parseFloat(new URLSearchParams(location.search).get("dtcap") || "0.05");
+  return Math.min(0.2, Math.max(0.016, isFinite(v) ? v : 0.05));
+})();
+let lastT = performance.now();
+function loop(t) {
+  const dt = Math.min(DT_CAP, (t - lastT) / 1000); lastT = t;
+  if (state === "playing") update(dt);
+  render();
+  requestAnimationFrame(loop);
+}
+
+/* ---------------- input --------------------------------------------------- */
+window.addEventListener("keydown", (e) => {
+  keys[e.key] = true;
+  if ([" ", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) e.preventDefault();
+  if (e.key === "p" || e.key === "P" || e.key === "Escape") {
+    if (state === "playing") pauseGame(false);
+    else if (state === "paused") resumeGame(false);
+  }
+  if (e.key === "m" || e.key === "M") setMuted(!muted);
+});
+window.addEventListener("keyup", (e) => { keys[e.key] = false; if (e.key === " ") mouse.down = false; });
+function canvasPos(e) {
+  const r = canvas.getBoundingClientRect();
+  return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height };
+}
+canvas.addEventListener("mousemove", (e) => { const p = canvasPos(e); mouse.x = p.x; mouse.y = p.y; mouse.active = true; });
+canvas.addEventListener("mousedown", (e) => { mouse.down = true; ensureAudioCtx(); });
+window.addEventListener("mouseup", () => { mouse.down = false; });
+canvas.addEventListener("pointerdown", (e) => {
+  const p = canvasPos(e); touch.x = p.x; touch.y = p.y; touch.active = true; ensureAudioCtx();
+});
+canvas.addEventListener("pointermove", (e) => {
+  if (touch.active) { const p = canvasPos(e); touch.x = p.x; touch.y = p.y; }
+});
+window.addEventListener("pointerup", () => { touch.active = false; });
+$("fireBtn").addEventListener("pointerdown", (e) => { e.preventDefault(); touch.active = true; mouse.down = true; });
+$("fireBtn").addEventListener("pointerup", () => { mouse.down = false; });
+
+/* ---------------- buttons -------------------------------------------------- */
+$("playBtn").addEventListener("click", () => pressPlay());
+$("continueBtn").addEventListener("click", () => pressPlay(Math.min(save.unlocked, TOTAL_LEVELS) - 1));
+$("pauseBtn").addEventListener("click", () => {
+  if (state === "playing") pauseGame(false); else if (state === "paused") resumeGame(false);
+});
+$("muteBtn").addEventListener("click", () => setMuted(!muted));
+$("resumeBtn").addEventListener("click", () => resumeGame(false));
+$("quitBtn").addEventListener("click", () => { hideAllScreens(); renderMenu(); });
+$("nextBtn").addEventListener("click", () => pressPlay(levelIndex + 1));
+$("replayBtn").addEventListener("click", () => pressPlay(levelIndex));
+$("retryBtn").addEventListener("click", () => pressPlay(levelIndex));
+$("againBtn").addEventListener("click", () => pressPlay(0));
+["menuBtn1", "menuBtn2", "menuBtn3"].forEach(id => $(id).addEventListener("click", renderMenu));
+
+/* ---------------- test hooks (used by the headless QA pass) --------------- */
+window.__starfall = {
+  get ready() { return !!IMG["player.png"] && !!IMG["background.png"]; },
+  get state() { return state; },
+  get level() { return levelIndex + 1; },
+  get score() { return score; },
+  get lives() { return lives; },
+  get kills() { return kills; },
+  get leaked() { return leaked; },
+  get baseHp() { return baseHp; },
+  get quota() { return LEVELS[levelIndex].quota; },
+  get enemies() { return enemies.length; },
+  get bossHp() { return boss ? boss.hp : null; },
+  get bossMaxHp() { return boss ? boss.maxHp : null; },
+  get levelTime() { return levelTime; },
+  get totalPlaySeconds() { return totalPlaySeconds; },
+  get levelTimes() { return Object.assign({}, levelTimes); },
+  get save() { return JSON.parse(JSON.stringify(save)); },
+  get muted() { return muted; },
+  get gmPreRollShown() { return window.__gamemonetize ? window.__gamemonetize.preRollShown : false; },
+  get gmAvailable() { return window.__gamemonetize ? window.__gamemonetize.available : false; },
+  get imagesLoaded() { return Object.keys(IMG).filter(k => IMG[k]).length; },
+  get imagesTotal() { return Object.keys(IMG).length; },
+  get dtCap() { return DT_CAP; },
+  get debug() {
+    return { spawnedTotal, enemies: enemies.map(e => ({ x: +e.x.toFixed(1), y: +e.y.toFixed(1),
+      hp: e.hp, pattern: e.pattern, fireT: +e.fireT.toFixed(2) })),
+      bullets: bullets.length, ebullets: ebullets.length,
+      player: player ? { x: +player.x.toFixed(1), y: +player.y.toFixed(1), alive: player.alive } : null,
+      spawnTimer: +spawnTimer.toFixed(2), boss: !!boss };
+  },
+  pressPlay, renderMenu,
+  setAutopilot(v) { autopilot = !!v; },
+  setGodMode(v) { godMode = !!v; },
+  setMuted,
+  levels: LEVELS.map((l, i) => ({ n: i + 1, name: l.name, enemy: l.enemy, boss: !!l.boss, quota: l.quota })),
+};
+
+/* ---------------- boot ------------------------------------------------------ */
+setMuted(muted);
+loadAllImages().then(() => {
+  renderMenu();
+  requestAnimationFrame(loop);
+  window.__starfallLoaded = true;
+});
+</script>
+</body>
+</html>
